@@ -1153,6 +1153,20 @@ func init() {
         "from": {
           "$ref": "#/definitions/Labels"
         },
+        "l4-egress": {
+          "description": "List of l4 egress rules",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Port"
+          }
+        },
+        "l4-ingress": {
+          "description": "List of l4 ingress rules",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Port"
+          }
+        },
         "to": {
           "$ref": "#/definitions/Labels"
         }
@@ -1262,6 +1276,26 @@ func init() {
     "PolicyTree": {
       "description": "Policy tree or subtree",
       "type": "string"
+    },
+    "Port": {
+      "description": "Layer 4 port/protocol tuple",
+      "type": "object",
+      "properties": {
+        "port": {
+          "description": "Layer 4 port number",
+          "type": "integer",
+          "format": "uint16"
+        },
+        "protocol": {
+          "description": "Layer 4 protocol",
+          "type": "string",
+          "enum": [
+            "tcp",
+            "udp",
+            "any"
+          ]
+        }
+      }
     },
     "Service": {
       "description": "Collection of endpoints to be served",
