@@ -128,10 +128,12 @@ func (h *getPolicyResolve) Handle(params GetPolicyResolveParams) middleware.Resp
 	buffer := new(bytes.Buffer)
 	ctx := params.IdentityContext
 	search := policy.SearchContext{
-		Trace:   policy.TRACE_ENABLED,
-		Logging: logging.NewLogBackend(buffer, "", 0),
-		From:    labels.NewLabelArrayFromModel(ctx.From),
-		To:      labels.NewLabelArrayFromModel(ctx.To),
+		Trace:     policy.TRACE_ENABLED,
+		Logging:   logging.NewLogBackend(buffer, "", 0),
+		From:      labels.NewLabelArrayFromModel(ctx.From),
+		To:        labels.NewLabelArrayFromModel(ctx.To),
+		L4Ingress: ctx.L4Ingress,
+		L4Egress:  ctx.L4Egress,
 	}
 
 	d.policy.Mutex.RLock()

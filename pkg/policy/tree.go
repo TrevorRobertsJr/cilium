@@ -92,7 +92,7 @@ func canConsume(root *Node, ctx *SearchContext) api.ConsumableDecision {
 func (t *Tree) AllowsRLocked(ctx *SearchContext) api.ConsumableDecision {
 	policyTrace(ctx, "NEW TRACE >> %s\n", ctx.String())
 
-	var decision, subDecision api.ConsumableDecision
+	var decision, subDecision, l4Dec api.ConsumableDecision
 	// In absence of policy, deny
 	if t.Root == nil {
 		decision = api.DENY
@@ -125,8 +125,21 @@ func (t *Tree) AllowsRLocked(ctx *SearchContext) api.ConsumableDecision {
 	}
 
 end:
-	policyTrace(ctx, "END TRACE << verdict: [%s]\n", strings.ToUpper(decision.String()))
 
+	l4Policy := t.ResolveL4Policy(ctx)
+
+	if l4Policy.CoversL4(ctx) {
+		l4Dec = api.ACCEPT
+	} else {
+		l4Dec = api.DENY
+	}
+	decStr := strings.ToUpper(decision.String())
+	l4DecStr := strings.ToUpper(l4Dec.String())
+	policyTrace(ctx, "END TRACE << l3 verdict: [%s], l4 verdict: [%s]\n", decStr, l4DecStr)
+
+	if decision == api.ACCEPT {
+		return l4Dec
+	}
 	return decision
 }
 
