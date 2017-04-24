@@ -28,6 +28,7 @@ import (
 	"github.com/cilium/cilium/common/addressing"
 	"github.com/cilium/cilium/pkg/container"
 	"github.com/cilium/cilium/pkg/endpoint"
+	k8sTypes "github.com/cilium/cilium/pkg/k8s/types"
 	"github.com/cilium/cilium/pkg/labels"
 	"github.com/cilium/cilium/pkg/policy"
 
@@ -152,7 +153,7 @@ func getCiliumIPv6(networks map[string]*dNetwork.EndpointSettings, gwIP *address
 	return nil
 }
 
-func (d *Daemon) fetchK8sLabels(dockerLbls map[string]string) (map[string]string, error) {
+func (d *Daemon) fetchk8sTypes(dockerLbls map[string]string) (map[string]string, error) {
 	if !d.conf.IsK8sEnabled() {
 		return nil, nil
 	}
@@ -170,36 +171,37 @@ func (d *Daemon) fetchK8sLabels(dockerLbls map[string]string) (map[string]string
 	if err != nil {
 		return nil, err
 	}
-	k8sLabels := result.GetLabels()
-	if k8sLabels == nil {
+	k8sLbls := result.GetLabels()
+	if k8sLbls == nil {
 		return nil, nil
 	}
-	k8sLabels[common.K8sPodNamespaceLabel] = ns
-	return k8sLabels, nil
+	k8sLbls[k8sTypes.PodNamespaceLabel] = ns
+	return k8sLbls, nil
 }
 
 func (d *Daemon) getFilteredLabels(allLabels map[string]string) labels.Labels {
-	var ciliumLabels, k8sLabels, k8sSpecialLabels labels.Labels
+	var ciliumLabels, k8sLbls, k8sSpecialLabels labels.Labels
 	if podName := k8sDockerLbls.GetPodName(allLabels); podName != "" {
-		k8sNormalLabels, err := d.fetchK8sLabels(allLabels)
+		k8sNormalLabels, err := d.fetchk8sTypes(allLabels)
 		if err != nil {
 			log.Warningf("Error while getting kubernetes labels: %s", err)
 		} else if k8sNormalLabels != nil {
-			k8sLabels = labels.Map2Labels(k8sNormalLabels, common.K8sLabelSource)
+			k8sLbls = labels.Map2Labels(k8sNormalLabels, k8sTypes.LabelSource)
 
-			// Transform all labels "k8s-app" and "version" to "io.cilium.k8s.k8s-app"
-			// and  "io.cilium.k8s.version"
+			// Transform all labels "k8s-app" and "version" to
+			// "k8s.k8s-app" and "k8s.version"
 			d.conf.ValidLabelPrefixesMU.RLock()
-			k8sSpecialLabels = d.conf.ValidK8sLabelPrefixes.FilterLabels(k8sLabels)
+			k8sSpecialLabels = d.conf.ValidK8sLabelPrefixes.FilterLabels(k8sLbls)
 			d.conf.ValidLabelPrefixesMU.RUnlock()
-			k8sSpecialLabels = k8sSpecialLabels.AppendPrefixInKey(common.K8sLabelPrefix)
+			//k8sParentPath := policy.JoinPath(common.DefaultPolicyParentPath, "")
+			// k8sSpecialLabels = k8sSpecialLabels.AppendPrefixInKey(k8sParentPath)
 			log.Debug("Special labels %s", k8sSpecialLabels)
 		}
 	}
 
 	ciliumLabels = labels.Map2Labels(allLabels, common.CiliumLabelSource)
 
-	ciliumLabels.MergeLabels(k8sLabels)
+	ciliumLabels.MergeLabels(k8sLbls)
 
 	d.conf.ValidLabelPrefixesMU.RLock()
 	normalLabels := d.conf.ValidLabelPrefixes.FilterLabels(ciliumLabels)
